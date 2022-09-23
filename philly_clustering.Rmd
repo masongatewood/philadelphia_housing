@@ -1,0 +1,201 @@
+---
+title: "AHS"
+author: "Mason Gatewood"
+date: "12/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(psych)
+```
+
+```{r}
+setwd("/Users/masongatewood/Desktop")
+ahs <- read.csv("ahs2019n.CSV")
+```
+
+```{r}
+phx_ahs <- ahs %>%
+  filter(OMB13CBSA == "'37980'")
+
+phx_ahs <- phx_ahs %>% 
+  select(
+    CONDO,
+    HOA,
+    MGRONSITE,
+    OWNLOT,
+    TENURE,
+    MHMOVE,
+    VACANCY,
+    VACMONTHS,
+    SUITYRRND,
+    VACINHER,
+    VACINVEST,
+    VACRESDAYS,
+    VACRNTDAYS,
+    VACSELL,
+    OCCYRRND,
+    BLD,
+    GUTREHB,
+    YRBUILT,
+    BEDROOMS,
+    BATHROOMS,
+    STORIES,
+    UNITSIZE,
+    HSHLDTYPE,
+    NUMADULTS,
+    NUMELDERS,
+    NUMNONREL,
+    NUMOLDKIDS,
+    NUMPEOPLE,
+    NUMSECFAM,
+    NUMSUBFAM,
+    NUMYNGKIDS,
+    PARTNER,
+    SAMESEXHH,
+    DISHH,
+    HHAGE,
+    HHGRAD,
+    HHMAR,
+    HHMOVE,
+    HHRACE,
+    HHRACEAS,
+    HHSEX,
+    FINCP,
+    FS,
+    HINCP,
+    INTPMT1,
+    OIP1,
+    PAP1,
+    RETP1,
+    SEMP1,
+    SSIP1,
+    SSP1,
+    WAGP1,
+    HOAAMT,
+    INSURAMT,
+    LOTAMT,
+    MORTAMT,
+    PROTAXAMT,
+    RENT,
+    TOTHCAMT,
+    UTILAMT,
+    HUDSUB,
+    RENTCNTRL,
+    RENTSUB,
+    PERPOVLVL,
+    POVLVLINC,
+    DWNPAYPCT,
+    FIRSTHOME,
+    HOWBUY,
+    MARKETVAL,
+    TOTBALAMT,
+    INTRATE1,
+    LOANTYPE1,
+    MORTNEW1,
+    MORTPURCH1,
+    PMTAMT1,
+    REFI1,
+    NORC,
+    SUBDIV,
+    NEARABAND,
+    NEARBARCL,
+    NEARTRASH,
+    NHQPCRIME,
+    NHQPUBTRN,
+    NHQRISK,
+    NHQSCHOOL,
+    NHQSCRIME,
+    RATINGHS,
+    RATINGNH,
+    MOVFORCE,
+    MOVWHY,
+    RMCHANGE,
+    RMCOMMUTE,
+    RMCOSTS,
+    RMFAMILY,
+    RMHOME,
+    RMHOOD,
+    RMJOB,
+    RMOTHER,
+    RMOWNHH,
+    HRATE,
+    NRATE,
+    SEARCHFAM,
+    SEARCHLIST,
+    SEARCHNET,
+    SEARCHOTH,
+    SEARCHPUB,
+    SEARCHREA,
+    SEARCHSIGN,
+    SEARCHSTOP,
+    MVG1COST,
+    MVG1LOC,
+    MVG1PER,
+    MVG1TEN,
+    MVG1TYPE
+  )
+
+dim(phx_ahs)
+head(phx_ahs)
+
+phx_ahs %>% 
+  mutate(CONDO = as.numeric(substring(CONDO,2,2)),
+         HOA = as.numeric(substring(HOA,2,2))
+         MGRONSITE = as.numeric(substring(MGRONSITE,2,2))
+         )
+
+write.csv(phx_ahs, "phx_ahs.CSV")
+```
+
+```{r}
+phx_ahs_slim <- read.csv("phx_ahs_slim.CSV")
+glimpse(phx_ahs_slim)
+pc_all <- principal(phx_ahs_slim, nfactors = ncol(phx_ahs_slim), rotate = "none")
+pc_all
+```
+
+
+```{r}
+permits <- read.csv("permits.CSV")
+
+phx_inv <- read.csv("phx_inventory.CSV")
+
+philly_inventory <- phx_inv %>% 
+  mutate(date = as.Date(date, format = "%m/%d/%Y"))
+
+permit_dates <- permits %>%
+  mutate(date = str_sub(permitissuedate,1,8)) %>%
+  mutate(date = as.Date(date, format = "%m/%d/%y")) %>%
+  mutate(year = str_sub(date,1,4),
+         month = str_sub(date,6,7)) %>% 
+  select(zip_simple, date, year, month, permitnumber) %>% 
+  group_by(year, month) %>% 
+  count(zip_simple)
+  
+  
+phx_permits <- permit_dates %>% 
+  mutate(day = "01",
+         date = paste(year, month, day, sep = "/")) %>% 
+  mutate(date = as.Date(date, "%Y/%m/%d")) %>% 
+  select(date, zip_simple, n)
+
+phx_inventory <- philly_inventory %>% 
+  mutate(date = as.Date(date, format = "%m/%d/%Y"))
+
+full_phx <- inner_join(phx_permits, phx_inventory, by = c("zip_simple" = "postal_code", "date" = "date"))
+
+final_data <- full_phx %>% 
+  select(date, zip_simple, n, median_listing_price, active_listing_count, median_days_on_market, new_listing_count, median_listing_price_per_square_foot, median_square_feet, average_listing_price, total_listing_count) %>% 
+  rename(zip = zip_simple,
+         building_permits = n)
+
+write.csv(final_data, "final_data.CSV")
+```
+
+
