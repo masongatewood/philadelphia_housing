@@ -1,0 +1,113 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r, message = FALSE}
+library(tidyverse)
+library(psych)
+library(dplyr)
+library(corrplot)
+library(moonBook)
+require(ggiraph)
+require(ggiraphExtra)
+require(plyr)
+theme_set(theme_minimal())
+```
+
+```{r}
+setwd("/Users/masongatewood/Desktop")
+philly <- read_csv("final_data1.csv")
+philly$date <- as.Date(philly$date, "%m/%d/%y")
+philly
+dim(philly)
+cor(philly[3:14])
+```
+
+
+```{r}
+lagged_philly <- philly %>%
+  arrange(date) %>%
+  arrange(zip) %>%
+  group_by(zip) %>%
+  mutate(lagged_building_permits = lag(building_permits, n = 1, default = NA))%>%
+  mutate(lagged_active_listing_count = lag(active_listing_count, n = 1, default = NA))%>%
+  mutate(lagged_median_days_on_market = lag(median_days_on_market, n = 1, default = NA))%>%
+  mutate(lagged_new_listing_count = lag(new_listing_count, n = 1, default = NA))%>%
+  mutate(lagged_median_square_feet = lag(median_square_feet, n = 1, default = NA))%>%
+  mutate(lagged_total_listing_count = lag(total_listing_count, n = 1, default = NA))
+  
+
+lagged_philly
+
+```
+
+```{r}
+plot1 <- philly %>% 
+  ggplot(aes(x = date, y = real_listing_price_yy/100)) +
+  geom_line(aes(group = factor(zip)), alpha = 1/5) +
+  labs(x = "date",
+       y = "real listing price change YoY %") +
+  scale_y_continuous(labels = scales::percent)
+
+ggsave(filename = "zipPlot",
+       plot = plot1,
+       device = "jpg"
+)
+```
+
+```{r}
+summary <- summary(philly)
+
+write.csv(summary, "summary.CSV")
+```
+
+
+```{r}
+n_total = nrow(lagged_philly)
+n_train = round(0.8*n_total)
+n_test = n_total-n_train
+partition = sample(c(rep("train", n_train), rep("test", n_test)))
+
+train = lagged_philly %>%
+    bind_cols(partition = partition) %>%
+    filter(partition == "train") %>%
+    select(-partition)
+
+test = lagged_philly %>%
+    bind_cols(partition = partition) %>%
+    filter(partition == "test") %>%
+    select(-partition)
+
+
+```
+
+
+```{r}
+lm_reg = lm(formula = real_listing_price_yy ~ lagged_building_permits + lagged_active_listing_count + lagged_median_days_on_market + lagged_median_square_feet,
+                        data = train)
+```
+
+```{r}
+plot(lm_reg)
+```
+
+```{r}
+summary(lm_reg)
+#predictions = predict(lm_reg, newdata = test)
+
+test$predictions = predict(lm_reg, newdata = test)
+test
+```
+```{r}
+round(predictions - test['median_listing_price'], 0)
+```
+
+
+
+
