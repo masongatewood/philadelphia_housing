@@ -148,7 +148,7 @@ head(phx_ahs)
 
 phx_ahs %>% 
   mutate(CONDO = as.numeric(substring(CONDO,2,2)),
-         HOA = as.numeric(substring(HOA,2,2))
+         HOA = as.numeric(substring(HOA,2,2)),
          MGRONSITE = as.numeric(substring(MGRONSITE,2,2))
          )
 
@@ -173,8 +173,8 @@ philly_inventory <- phx_inv %>%
 
 permit_dates <- permits %>%
   mutate(date = str_sub(permitissuedate,1,8)) %>%
-  mutate(date = as.Date(date, format = "%m/%d/%y")) %>%
-  mutate(year = str_sub(date,1,4),
+  mutate(date = as.Date(date, format = "%m/%d/%y"),
+         year = str_sub(date,1,4),
          month = str_sub(date,6,7)) %>% 
   select(zip_simple, date, year, month, permitnumber) %>% 
   group_by(year, month) %>% 
